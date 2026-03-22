@@ -5,7 +5,7 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "build": "prisma generate && prisma db push && node prisma/seed.js",
+    "build": "npx prisma generate && npx prisma db push && node prisma/seed.js",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "db:push": "prisma db push",
@@ -25,10 +25,10 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.10",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "prisma": "^5.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.0",
-    "prisma": "^5.10.0"
+    "nodemon": "^3.1.0"
   }
 }

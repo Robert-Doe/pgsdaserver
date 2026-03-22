@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Environment
+.env
+*.env.local
+
+# Database
+*.db
+*.db-journal
+
+# Build output
+dist/
+build/
+
+# Uploads
+server/uploads/
+
+# Prisma
+server/prisma/migrations/
+
+# Editor
+.DS_Store
+.vscode/
+*.swp
