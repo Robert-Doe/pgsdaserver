@@ -1,0 +1,243 @@
+// Phoenix Ghanaian SDA Church — Database Schema
+// Engine: SQLite (dev) / PostgreSQL (prod)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+// AUTH & USERS
+// ═══════════════════════════════════════════
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  role          String    @default("MEMBER") // MEMBER | ADMIN | PASTOR | DEACON
+  status        String    @default("PENDING") // PENDING | ACTIVE | INACTIVE | SUSPENDED
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  refreshTokens RefreshToken[]
+  member        Member?
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@map("refresh_tokens")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@map("password_resets")
+}
+
+// ═══════════════════════════════════════════
+// MEMBERS
+// ═══════════════════════════════════════════
+
+model Member {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  phone          String?
+  avatarUrl      String?
+  dateOfBirth    DateTime?
+  baptismDate    DateTime?
+  memberSince    DateTime @default(now())
+  ministry       String?  // Ministry department name
+  address        String?
+  city           String?
+  state          String?
+  zip            String?
+  emergencyName  String?
+  emergencyPhone String?
+  notes          String?  // Pastoral notes — private
+  isVisible      Boolean  @default(true) // Show in directory
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  prayerRequests PrayerRequest[]
+  @@map("members")
+}
+
+// ═══════════════════════════════════════════
+// CAROUSEL / BANNERS
+// ═══════════════════════════════════════════
+
+model CarouselSlide {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  imageUrl    String?
+  imageBg     String   @default("#2d4a1e") // Fallback bg color
+  tag         String   @default("gold")   // gold | green | campfire | ming
+  tagLabel    String   @default("Announcement")
+  ctaText     String?
+  ctaUrl      String?
+  status      String   @default("draft")  // live | draft | scheduled
+  order       Int      @default(0)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("carousel_slides")
+}
+
+// ═══════════════════════════════════════════
+// EVENTS
+// ═══════════════════════════════════════════
+
+model Event {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  category      String   @default("Worship Service") // Worship | Youth | Cultural | Community | Prayer | Special
+  date          DateTime
+  endDate       DateTime?
+  location      String   @default("Main Sanctuary")
+  dresscode     String?
+  rsvpRequired  Boolean  @default(false)
+  imageUrl      String?
+  status        String   @default("published") // published | draft | cancelled
+  featured      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@map("events")
+}
+
+// ═══════════════════════════════════════════
+// SERMONS
+// ═══════════════════════════════════════════
+
+model Sermon {
+  id           String   @id @default(uuid())
+  title        String
+  speaker      String
+  description  String?
+  scriptureRef String?
+  series       String?
+  serviceType  String   @default("Sabbath Service")
+  date         DateTime
+  duration     Int?     // minutes
+  videoUrl     String?  // YouTube / Vimeo URL
+  audioUrl     String?  // Uploaded audio file path
+  thumbnailUrl String?
+  featured     Boolean  @default(false)
+  status       String   @default("published") // published | draft
+  views        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@map("sermons")
+}
+
+// ═══════════════════════════════════════════
+// PRAYER REQUESTS
+// ═══════════════════════════════════════════
+
+model PrayerRequest {
+  id          String   @id @default(uuid())
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  name        String   @default("Anonymous")
+  request     String
+  isPrivate   Boolean  @default(false)
+  isUrgent    Boolean  @default(false)
+  status      String   @default("new") // new | open | answered | closed
+  pastoralNote String?
+  pastoralReply String?
+  repliedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("prayer_requests")
+}
+
+// ═══════════════════════════════════════════
+// GIVING / DONATIONS
+// ═══════════════════════════════════════════
+
+model GivingRecord {
+  id            String   @id @default(uuid())
+  memberId      String?
+  memberName    String   @default("Anonymous")
+  fund          String   // tithe | offering | building | youth | special
+  amount        Float
+  method        String   @default("online") // online | sabbath | check | transfer
+  transactionId String?  // From Adventist Giving or payment processor
+  notes         String?
+  date          DateTime @default(now())
+  createdAt     DateTime @default(now())
+  @@map("giving_records")
+}
+
+// ═══════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════
+
+model Notification {
+  id          String   @id @default(uuid())
+  title       String
+  body        String
+  type        String   @default("announcement") // announcement | event | sermon | giving | prayer | urgent
+  ctaText     String?
+  ctaUrl      String?
+  audience    String   @default("all") // all | members | youth | women | men
+  channels    String   @default("push,email") // Comma-separated: push | email | carousel
+  status      String   @default("draft") // draft | sent | scheduled
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  openCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("notifications")
+}
+
+// ═══════════════════════════════════════════
+// SITE SETTINGS
+// ═══════════════════════════════════════════
+
+model SiteSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string") // string | boolean | number | json
+  label     String?
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+  @@map("site_settings")
+}
+
+// ═══════════════════════════════════════════
+// CONTACT MESSAGES
+// ═══════════════════════════════════════════
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String?
+  subject   String   @default("General inquiry")
+  message   String
+  read      Boolean  @default(false)
+  replied   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  @@map("contact_messages")
+}
