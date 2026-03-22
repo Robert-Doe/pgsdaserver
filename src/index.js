@@ -30,6 +30,7 @@ const PORT = process.env.PORT || 5000
 // ── Security ──
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 
+// CORS — allow Render client, localhost dev, and any CLIENT_URL env var
 const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -38,17 +39,25 @@ const ALLOWED_ORIGINS = [
   process.env.CLIENT_URL,
 ].filter(Boolean)
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, curl, Postman)
+    // No origin = server-to-server, Postman, mobile — always allow
     if (!origin) return callback(null, true)
+    // Exact match
     if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true)
+    // Allow any onrender.com subdomain (covers preview deploys)
+    if (origin.endsWith('.onrender.com')) return callback(null, true)
+    console.warn(`CORS blocked: ${origin}`)
     callback(new Error('CORS: origin not allowed'))
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}))
+}
+
+app.use(cors(corsOptions))
+// Handle preflight OPTIONS for all routes
+app.options('*', cors(corsOptions))
 
 // ── Rate Limiting ──
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false })
